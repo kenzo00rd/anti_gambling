@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ギャンブル・オフ - 新しい人生の記録</title>
+    <style>
+        :root {
+            --primary: #e91e63; /* PDFの表紙カラーをイメージ */
+            --secondary: #fbc02d;
+            --bg: #f5f5f5;
+            --card-bg: #ffffff;
+            --text: #333;
+            --success: #4caf50;
+        }
+
+        body {
+            font-family: "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* ヘッダー */
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            color: var(--primary);
+        }
+        .streak-display {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: var(--text);
+        }
+        .streak-label {
+            font-size: 1rem;
+            color: #777;
+        }
+
+        /* カード共通 */
+        .card {
+            background: var(--card-bg);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        /* 助言エリア */
+        .advice-section {
+            background: linear-gradient(135deg, #e91e63 0%, #ff80ab 100%);
+            color: white;
+            text-align: center;
+        }
+        .advice-text {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .refresh-btn {
+            background: rgba(255,255,255,0.2);
+            border: 1px solid white;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        /* アクションボタン */
+        .checkin-btn {
+            width: 100%;
+            padding: 15px;
+            font-size: 1.2rem;
+            background-color: var(--success);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+        .checkin-btn:active {
+            transform: scale(0.98);
+        }
+        .checkin-btn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        /* 成果（貯金・時間） */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .stat-item {
+            text-align: center;
+            background: #e3f2fd;
+            padding: 10px;
+            border-radius: 10px;
+        }
+        .stat-value {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #1565c0;
+        }
+        .stat-label {
+            font-size: 0.8rem;
+            color: #555;
+        }
+
+        /* カレンダー */
+        .calendar-header {
+            text-align: center;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+            text-align: center;
+        }
+        .day {
+            padding: 10px 0;
+            border-radius: 5px;
+            background: #eee;
+            font-size: 0.9rem;
+        }
+        .day.checked {
+            background: var(--success);
+            color: white;
+            font-weight: bold;
+            position: relative;
+        }
+        .day.checked::after {
+            content: "★";
+            position: absolute;
+            font-size: 0.6rem;
+            top: 2px;
+            right: 2px;
+            color: yellow;
+        }
+
+        /* 緊急ボタン */
+        .sos-section {
+            text-align: center;
+        }
+        .sos-btn {
+            background: #333;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+        }
+        
+        /* 設定エリア */
+        .settings-details {
+            display: none;
+            margin-top: 10px;
+            font-size: 0.9rem;
+        }
+        .settings-toggle {
+            text-align: center;
+            color: #777;
+            text-decoration: underline;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+        input {
+            width: 80px;
+            padding: 5px;
+            margin: 5px;
+        }
+
+        /* 紙吹雪アニメーション用 */
+        .confetti {
+            position: fixed;
+            width: 10px;
+            height: 10px;
+            background-color: #f00;
+            animation: fall linear forwards;
+            z-index: 9999;
+        }
+        @keyframes fall {
+            to { transform: translateY(100vh) rotate(720deg); }
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <div class="streak-label">現在継続中</div>
+        <div class="streak-display"><span id="streakCount">0</span> 日</div>
+        <h1>Gamble Off Tracker</h1>
+    </header>
+
+    <!-- 助言セクション -->
+    <div class="card advice-section">
+        <div class="advice-text" id="adviceText">読み込み中...</div>
+        <button class="refresh-btn" onclick="updateAdvice()">別の助言を見る</button>
+    </div>
+
+    <!-- 成果セクション -->
+    <div class="card">
+        <div class="stats-grid">
+            <div class="stat-item">
+                <div class="stat-label">守ったお金（貯金）</div>
+                <div class="stat-value" id="moneySaved">¥0</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">取り戻した時間</div>
+                <div class="stat-value" id="timeSaved">0時間</div>
+            </div>
+        </div>
+        
+        <div class="settings-toggle" onclick="toggleSettings()">設定変更（1日の平均使用額・時間）</div>
+        <div class="settings-details" id="settingsArea">
+            <label>1回の平均使用額: <input type="number" id="avgMoney" value="30000">円</label><br>
+            <label>1回の平均時間: <input type="number" id="avgTime" value="4">時間</label>
+            <button onclick="saveSettings()">保存</button>
+        </div>
+    </div>
+
+    <!-- アクション -->
+    <div class="card" style="text-align: center;">
+        <p>今日はギャンブルをしませんでしたか？</p>
+        <button class="checkin-btn" id="checkinBtn" onclick="checkIn()">今日も一日クリア！</button>
+        <p id="cheerMessage" style="color: var(--primary); font-weight: bold; margin-top: 10px;"></p>
+    </div>
+
+    <!-- カレンダー -->
+    <div class="card">
+        <div class="calendar-header" id="calendarHeader"></div>
+        <div class="calendar-grid" id="calendarGrid">
+            <!-- JSで生成 -->
+        </div>
+    </div>
+
+    <!-- SOS -->
+    <div class="sos-section">
+        <button class="sos-btn" onclick="showSOS()">⚠️ 行きたくなったら（緊急モード）</button>
+    </div>
+</div>
+
+<script>
+    // --- STEP-G等に基づく助言リスト ---
+    const adviceList = [
+        "ギャンブル障害は意志の弱さではなく、脳の回路の問題です。回路を休ませましょう。",
+        "「今日一日だけ」ギャンブルをしない。その積み重ねが未来を作ります。",
+        "渇望（やりたい気持ち）は波のようなもの。数分耐えれば、波は引いていきます。",
+        "勝った記憶は「脳のトリック」。負けた時の絶望感やATMに向かう惨めさを思い出して。",
+        "財布には「今日必要な最低限のお金」だけを入れましょう。",
+        "「取り返そう」とするのが一番危険な罠です。負けを確定させることが、回復への第一歩です。",
+        "ギャンブルの代わりに、美味しいものを食べたり、ゆっくりお風呂に入りましょう。",
+        "スリップ（再発）しても、それは失敗ではありません。すぐに戻ってくればいいのです。",
+        "嘘と借金は、ギャンブルの燃料です。正直になることは、回復への近道です。",
+        "暇な時間は危険です。予定を詰めたり、物理的に移動して環境を変えましょう。",
+        "ギャンブルをしないことで、あなたは「信頼」という最大の財産を取り戻しています。",
+        "「1回くらいなら」という囁きは、脳の病気が言わせている嘘です。",
+        "あなたが苦しい時、過去の自分ではなく「未来のなりたい自分」を想像してください。",
+        "深呼吸をして、今ここにある「平穏」を感じてください。スリルは必要ありません。"
+    ];
+
+    // --- データ管理 ---
+    const STORAGE_KEY = 'gamble_off_data';
+    let appData = {
+        streak: 0,
+        history: [], // 'YYYY-MM-DD' 形式の配列
+        avgMoney: 30000,
+        avgTime: 4
+    };
+
+    // 初期化
+    function init() {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+            appData = JSON.parse(stored);
+        }
+        
+        // 設定値の反映
+        document.getElementById('avgMoney').value = appData.avgMoney;
+        document.getElementById('avgTime').value = appData.avgTime;
+
+        renderStats();
+        renderCalendar();
+        updateAdvice();
+        checkButtonState();
+    }
+
+    // データの保存
+    function saveData() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+    }
+
+    // 助言の更新
+    function updateAdvice() {
+        const randomIndex = Math.floor(Math.random() * adviceList.length);
+        document.getElementById('adviceText').innerText = adviceList[randomIndex];
+    }
+
+    // 今日の日付文字列
+    function getTodayString() {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+
+    // 継続日数と成果の計算・表示
+    function renderStats() {
+        // ストリーク計算（連続でなくても、単純に「やめられた総日数」を表示する形式にしています。モチベーション維持のため）
+        // もし「連続」のみにしたい場合はロジックを変更可能ですが、今回は「積み上げ」を重視。
+        const count = appData.history.length;
+        document.getElementById('streakCount').innerText = count;
+
+        const money = count * appData.avgMoney;
+        const time = count * appData.avgTime;
+
+        document.getElementById('moneySaved').innerText = `¥${money.toLocaleString()}`;
+        document.getElementById('timeSaved').innerText = `${time}時間`;
+    }
+
+    // カレンダー描画
+    function renderCalendar() {
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = today.getMonth(); // 0-11
+        
+        document.getElementById('calendarHeader').innerText = `${year}年 ${month + 1}月`;
+
+        const firstDay = new Date(year, month, 1);
+        const lastDay = new Date(year, month + 1, 0);
+        const daysInMonth = lastDay.getDate();
+        const startingDay = firstDay.getDay(); // 0(Sun) - 6(Sat)
+
+        const grid = document.getElementById('calendarGrid');
+        grid.innerHTML = '';
+
+        // 空白セル
+        for (let i = 0; i < startingDay; i++) {
+            const div = document.createElement('div');
+            grid.appendChild(div);
+        }
+
+        // 日付セル
+        for (let d = 1; d <= daysInMonth; d++) {
+            const dateStr = `${year}-${String(month+1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+            const div = document.createElement('div');
+            div.className = 'day';
+            div.innerText = d;
+
+            if (appData.history.includes(dateStr)) {
+                div.classList.add('checked');
+            }
+
+            grid.appendChild(div);
+        }
+    }
+
+    // チェックイン（今日の達成）
+    function checkIn() {
+        const todayStr = getTodayString();
+        if (!appData.history.includes(todayStr)) {
+            appData.history.push(todayStr);
+            appData.history.sort(); // 日付順に
+            saveData();
+            
+            renderStats();
+            renderCalendar();
+            checkButtonState();
+            
+            document.getElementById('cheerMessage').innerText = "素晴らしい！今日も未来のために勝利しました！";
+            triggerConfetti();
+        }
+    }
+
+    // ボタンの状態制御
+    function checkButtonState() {
+        const todayStr = getTodayString();
+        const btn = document.getElementById('checkinBtn');
+        if (appData.history.includes(todayStr)) {
+            btn.innerText = "本日は記録済みです ✅";
+            btn.disabled = true;
+            btn.style.backgroundColor = "#888";
+        } else {
+            btn.innerText = "今日も一日クリア！";
+            btn.disabled = false;
+            btn.style.backgroundColor = "var(--success)";
+        }
+    }
+
+    // 設定保存
+    function saveSettings() {
+        const m = parseInt(document.getElementById('avgMoney').value);
+        const t = parseInt(document.getElementById('avgTime').value);
+        if (m >= 0 && t >= 0) {
+            appData.avgMoney = m;
+            appData.avgTime = t;
+            saveData();
+            renderStats();
+            alert("設定を保存しました。これまでの成果が再計算されました！");
+            document.getElementById('settingsArea').style.display = 'none';
+        }
+    }
+
+    function toggleSettings() {
+        const area = document.getElementById('settingsArea');
+        area.style.display = area.style.display === 'block' ? 'none' : 'block';
+    }
+
+    // SOSモード
+    function showSOS() {
+        const msg = `
+【緊急モード】
+一息ついて、以下のことを思い出してください。
+
+1. そのお金を使ったら、明日の朝どんな気持ちになりますか？
+2. 「1回だけ」はありません。脳の回路が再び暴走します。
+3. 今すぐ、その場（店やPCの前）から物理的に離れてください。
+4. 信頼できる人に電話をするか、深呼吸を3分間してください。
+
+あなたは「やめ続ける力」を持っています。
+        `;
+        alert(msg);
+    }
+
+    // 紙吹雪エフェクト
+    function triggerConfetti() {
+        const colors = ['#e91e63', '#fbc02d', '#2196f3', '#4caf50'];
+        for (let i = 0; i < 50; i++) {
+            const confetti = document.createElement('div');
+            confetti.className = 'confetti';
+            confetti.style.left = Math.random() * 100 + 'vw';
+            confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+            confetti.style.animationDuration = (Math.random() * 2 + 2) + 's';
+            document.body.appendChild(confetti);
+            
+            setTimeout(() => confetti.remove(), 4000);
+        }
+    }
+
+    // 開始
+    init();
+
+</script>
+</body>
+</html>
